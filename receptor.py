@@ -58,6 +58,7 @@ def hammingDecoding(message):
         resXOR.append(str(value%2))
     j = int(''.join(resXOR),2)
     if j!=0:
+        print(f'There is an error in the position {len(message)-j}')
         message = list(message)
         message[len(message)-j] = str((int(message[len(message)-j])+1)%2)
         message = "".join(message)
@@ -68,5 +69,5 @@ def hammingDecoding(message):
 # decodedMessage = hammingDecoding(encodedMessage)
 # print(encodedMessage)
 # print(decodedMessage)
-# message = input("enter bit message: ")
-# print(hammingDecoding(message))
+message = input("enter bit message: ")
+print(f'Message corrected is: {hammingDecoding(message)}')
