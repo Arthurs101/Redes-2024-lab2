@@ -34,18 +34,18 @@ uint32_t crc32(const string &data) {
 // Función para calcular el código Hamming (7,4)
 string hamming74(const string &data) {
     int n = data.length();
-    vector<int> bits(n);
+    vector<int> bits(n+3);
     for (int i = 0; i < n; ++i) {
         bits[i] = data[i] - '0'; // char a entero
     }
-
-    //calculo de bits de paridad basado en
-    int p1 = bits[0] ^ bits[1] ^ bits[3];
-    int p2 = bits[0] ^ bits[2] ^ bits[3];
-    int p3 = bits[1] ^ bits[2] ^ bits[3];
+    
+    // Parity calculation
+    bits[6]=bits[0]^bits[2]^bits[4];
+    bits[5]=bits[0]^bits[1]^bits[4];
+    bits[3]=bits[0]^bits[1]^bits[2];
 
     string hamming_code = to_string(bits[0]) + to_string(bits[1]) + to_string(bits[2]) +
-                      to_string(p1) + to_string(bits[3]) + to_string(p2) + to_string(p3);
+                      to_string(bits[3]) + to_string(bits[4]) + to_string(bits[5]) + to_string(bits[6]);
     return hamming_code;
 }
 
@@ -55,7 +55,7 @@ void encode(const string &input) {
     uint32_t crc = crc32(input);
 
     cout << "Hamming encoded: " << hamming_encoded << endl;
-    cout << "CRC32 Checksum: " << bitset<32>(crc) << endl;
+    cout << "CRC32 Checksum: " << input<<bitset<32>(crc) << endl;
 }
 
 int main() {
