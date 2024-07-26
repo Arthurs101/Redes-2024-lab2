@@ -63,11 +63,32 @@ def hammingDecoding(message):
         message[len(message)-j] = str((int(message[len(message)-j])+1)%2)
         message = "".join(message)
     return message
+
+def crcxor(message:list, polinomio:list):
+    if len(message)>=len(polinomio) and '1' in message:
+        firstOne = 0
+        for index in range(0, len(polinomio)):
+            message[index] = (str((int(message[index])+int(polinomio[index]))%2))
+            if message[index] == '1':
+                firstOne = index
+        message = crcxor(message[firstOne:],polinomio)
+    return message
+
+def crc32Decoding(message:str, polinomio:str='100000100110000010001110110110111'):
+    # Apply xor 
+    message = list(message)
+    polinomio = list(polinomio)
+    message = crcxor(message,polinomio)
+    print('Error in message '+"".join(message)) if '1' in message else print(f'Message accepted')
     
+# crc32Decoding('11010001','1001')
+crc32Decoding('10110101111001011100100100100000')
 # message = input("Enter a bit message of any length: ")
 # encodedMessage = hammingEncoding(message)
 # decodedMessage = hammingDecoding(encodedMessage)
 # print(encodedMessage)
 # print(decodedMessage)
-message = input("enter bit message: ")
-print(f'Message corrected is: {hammingDecoding(message)}')
+# message = input("enter bit message: ")
+# print(f'Message corrected is: {hammingDecoding(message)}')
+
+
