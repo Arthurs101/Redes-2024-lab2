@@ -62,6 +62,9 @@ def hammingDecoding(message):
         message = list(message)
         message[len(message)-j] = str((int(message[len(message)-j])+1)%2)
         message = "".join(message)
+        print(f'Corrected message is: {message}')
+    else:
+        print("There is no error in message")
     return message
 
 def crc32(data): 
@@ -84,8 +87,10 @@ def crc32Decoding(input):
         print('Correct checksum')
     else:
         print('Incorrect checksum')
-    
-crc32Decoding('100010011110000111010001111110011000')
+
+hammingDecoding(input('Enter a bit message for the Hamming decoding: '))
+crc32Decoding(input('Enter a bit message for the crc32 detection: '))
+
 # message = input("Enter a bit message of any length: ")
 # encodedMessage = hammingEncoding(message)
 # decodedMessage = hammingDecoding(encodedMessage)
