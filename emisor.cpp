@@ -11,25 +11,30 @@
 
 using namespace std;
 
-// Función para calcular el CRC32 Checksum
-uint32_t crc32(const string &data) {
+uint32_t crc32(const std::string& data) {
+    const uint32_t POLY = 0x04C11DB7; // CRC32 polynomial
     uint32_t crc = 0xFFFFFFFF;
-    for (char c : data) {
-        crc ^= static_cast<uint32_t>(c); // char a bits ( 8 bits)
-        for (int i = 0; i < 8; ++i) { //operar sobre los 8 bits que representan el caracter
-            if (crc & 1) { 
-                /*  Si el bit menos significativo (crc & 1) es 1, 
-               se desplaza crc un bit a la derecha (crc >> 1) 
-               y se aplica XOR con el polinomio 0xEDB88320. */ 
-                crc = (crc >> 1) ^ 0xEDB88320; 
+    for (char bit : data) {
+        crc ^= (bit == '1' ? 1 : 0) << 31;
+        for (int i = 0; i < 8; ++i) {
+            if (crc & 0x80000000) {
+                crc = (crc << 1) ^ POLY;
             } else {
-                /* de lo contrario, solo moverlo 1 a la derecha*/
-                crc >>= 1;
+                crc <<= 1;
             }
         }
     }
-    return crc ^ 0xFFFFFFFF; // xor con -1 en hexadecimal, para invertir los bits
+    return crc ^ 0xFFFFFFFF;
 }
+
+std::string uint32ToBinaryString(uint32_t value) {
+    std::string result;
+    for (int i = 31; i >= 0; --i) {
+        result += (value & (1 << i)) ? '1' : '0';
+    }
+    return result;
+}
+
 
 // Función para calcular el código Hamming (7,4)
 string hamming74(const string &data) {
@@ -53,9 +58,10 @@ string hamming74(const string &data) {
 void encode(const string &input) {
     string hamming_encoded = hamming74(input);
     uint32_t crc = crc32(input);
-
+    std::string crcBinaryString = uint32ToBinaryString(crc);
+    std::string output = input + crcBinaryString;
     cout << "Hamming encoded: " << hamming_encoded << endl;
-    cout << "CRC32 Checksum: " << input<<bitset<32>(crc) << endl;
+    cout << "CRC32 Checksum: " << output << endl;
 }
 
 int main() {
