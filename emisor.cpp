@@ -15,16 +15,20 @@ using namespace std;
 uint32_t crc32(const string &data) {
     uint32_t crc = 0xFFFFFFFF;
     for (char c : data) {
-        crc ^= static_cast<uint32_t>(c);
-        for (int i = 0; i < 8; ++i) {
-            if (crc & 1) {
-                crc = (crc >> 1) ^ 0xEDB88320;
+        crc ^= static_cast<uint32_t>(c); // char a bits ( 8 bits)
+        for (int i = 0; i < 8; ++i) { //operar sobre los 8 bits que representan el caracter
+            if (crc & 1) { 
+                /*  Si el bit menos significativo (crc & 1) es 1, 
+               se desplaza crc un bit a la derecha (crc >> 1) 
+               y se aplica XOR con el polinomio 0xEDB88320. */ 
+                crc = (crc >> 1) ^ 0xEDB88320; 
             } else {
+                /* de lo contrario, solo moverlo 1 a la derecha*/
                 crc >>= 1;
             }
         }
     }
-    return crc ^ 0xFFFFFFFF;
+    return crc ^ 0xFFFFFFFF; // xor con -1 en hexadecimal, para invertir los bits
 }
 
 // Función para calcular el código Hamming (7,4)
@@ -32,14 +36,16 @@ string hamming74(const string &data) {
     int n = data.length();
     vector<int> bits(n);
     for (int i = 0; i < n; ++i) {
-        bits[i] = data[i] - '0';
+        bits[i] = data[i] - '0'; // char a entero
     }
 
-    int r1 = bits[0] ^ bits[1] ^ bits[3];
-    int r2 = bits[0] ^ bits[2] ^ bits[3];
-    int r3 = bits[1] ^ bits[2] ^ bits[3];
+    //calculo de bits de paridad basado en
+    int p1 = bits[0] ^ bits[1] ^ bits[3];
+    int p2 = bits[0] ^ bits[2] ^ bits[3];
+    int p3 = bits[1] ^ bits[2] ^ bits[3];
 
-    string hamming_code = data + to_string(r1) + to_string(r2) + to_string(r3);
+    string hamming_code = to_string(bits[0]) + to_string(bits[1]) + to_string(bits[2]) +
+                      to_string(p1) + to_string(bits[3]) + to_string(p2) + to_string(p3);
     return hamming_code;
 }
 
