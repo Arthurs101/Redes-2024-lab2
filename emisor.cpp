@@ -115,7 +115,7 @@ Message applyNoise(Message mess){
     int position;
     cout << random_number << endl;
     // Apply Noise CRC32 & Hamming
-    if (random_number < 0.0) {
+    if (random_number < 0.5) {
         // left hamming
         position = dist(eng) * (sizeof(mess.hamming_code_l) - 1);
         mess.hamming_code_l[position] = (mess.hamming_code_l[position] == '0' ? '1' : '0');
