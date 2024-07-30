@@ -1,15 +1,19 @@
-// codigo en C++ para el emisor
-// Arturo Argueta
-// Diego Alonzo
-//emplea el uso de bit de paridad
-
 #include <iostream>
 #include <string>
 #include <vector>
 #include <bitset>
 #include <algorithm>
+#include <cstring>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 using namespace std;
+
+struct Message {
+    char hamming_code[8];
+    char crc32_code[37];
+};
 
 uint32_t crc32(const std::string& data) {
     const uint32_t POLY = 0x04C11DB7; // CRC32 polynomial
@@ -35,36 +39,60 @@ std::string uint32ToBinaryString(uint32_t value) {
     return result;
 }
 
-
 // Función para calcular el código Hamming (7,4)
 string hamming74(const string &data) {
     int n = data.length();
-    vector<int> bits(n+3);
+    vector<int> bits(n + 3);
     for (int i = 0; i < n; ++i) {
         bits[i] = data[i] - '0'; // char a entero
     }
     
     // Parity calculation
-    bits[6]=bits[0]^bits[2]^bits[4];
-    bits[5]=bits[0]^bits[1]^bits[4];
-    bits[3]=bits[0]^bits[1]^bits[2];
+    bits[6] = bits[0] ^ bits[2] ^ bits[4];
+    bits[5] = bits[0] ^ bits[1] ^ bits[4];
+    bits[3] = bits[0] ^ bits[1] ^ bits[2];
 
     string hamming_code = to_string(bits[0]) + to_string(bits[1]) + to_string(bits[2]) +
-                      to_string(bits[3]) + to_string(bits[4]) + to_string(bits[5]) + to_string(bits[6]);
+                          to_string(bits[3]) + to_string(bits[4]) + to_string(bits[5]) + to_string(bits[6]);
     return hamming_code;
 }
 
 // Función para codificar una cadena de bits usando el código Hamming y CRC32 Checksum
-void encode(const string &input) {
+Message encode(const string &input) {
     string hamming_encoded = hamming74(input);
     uint32_t crc = crc32(input);
     std::string crcBinaryString = uint32ToBinaryString(crc);
     std::string output = input + crcBinaryString;
     cout << "Hamming encoded: " << hamming_encoded << endl;
     cout << "CRC32 Checksum: " << output << endl;
+
+    Message newM;
+    strncpy(newM.hamming_code, hamming_encoded.c_str(), sizeof(newM.hamming_code) - 1);
+    newM.hamming_code[sizeof(newM.hamming_code) - 1] = '\0';
+    strncpy(newM.crc32_code, output.c_str(), sizeof(newM.crc32_code) - 1);
+    newM.crc32_code[sizeof(newM.crc32_code) - 1] = '\0';
+
+    return newM;
 }
 
-int main() {
+Message applyNoise(Message mess){
+    // Apply Noise Hamming
+    int position;
+    if (rand()/RAND_MAX>0.5){
+        position = rand() % sizeof(mess.hamming_code);
+        mess.hamming_code[position] = (mess.hamming_code[position]+1)%2;
+        cout<< "Applied noise in hamming code position: "<< position<<endl;
+    }
+    // Apply Noise CRC32
+    if (rand()/RAND_MAX>0.5){
+        position = rand() % sizeof(mess.crc32_code);
+        mess.hamming_code[position] = (mess.crc32_code[position]+1)%2;
+        cout<< "Applied noise in crc32 code position: "<< position<<endl;
+    }
+    return mess;
+}
+
+int main() {    
     string bit_string;
     cout << "Enter a bit string: ";
     cin >> bit_string;
@@ -81,7 +109,34 @@ int main() {
         return 1;
     }
 
-    encode(bit_string);
+    Message newM = encode(bit_string);
 
+    // creating socket 
+    int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (clientSocket < 0) {
+        cerr << "Socket creation error" << endl;
+        return 1;
+    }
+
+    // specifying address 
+    sockaddr_in serverAddress; 
+    serverAddress.sin_family = AF_INET; 
+    serverAddress.sin_port = htons(65432); 
+    serverAddress.sin_addr.s_addr = INADDR_ANY; 
+
+    // sending connection request 
+    if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
+        cerr << "Connection failed" << endl;
+        return 1;
+    }
+    Message finalMessage = applyNoise(newM);
+    // sending data 
+    if (send(clientSocket, &finalMessage, sizeof(finalMessage), 0) < 0) {
+        perror("Send failed");
+        return 1;
+    }
+
+    // closing socket 
+    close(clientSocket); 
     return 0;
 }

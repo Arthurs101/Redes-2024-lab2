@@ -1,8 +1,9 @@
-# Arturo Argueta 
-# Diego Alonzo
+import socket
+import struct
 import math
-# def xOrOp(xorarray):
-    
+
+
+
 def hammingEncoding(message):
     mesLen = len(message)
     newM = []
@@ -57,6 +58,7 @@ def hammingDecoding(message):
         # Si es par va a ser 0 si es impar sera 1
         resXOR.append(str(value%2))
     j = int(''.join(resXOR),2)
+    success = False
     if j!=0:
         print(f'There is an error in the position {len(message)-j}')
         message = list(message)
@@ -65,7 +67,8 @@ def hammingDecoding(message):
         print(f'Corrected message is: {message}')
     else:
         print("There is no error in message")
-    return message
+        success = True
+    return [message, success]
 
 def crc32(data): 
     POLY = 0x04C11DB7
@@ -85,18 +88,39 @@ def crc32Decoding(input):
     checksum = format(crc32(data),'032b')
     if input[-32:] == str(checksum):
         print('Correct checksum')
+        return True
     else:
         print('Incorrect checksum')
+        return False
 
-hammingDecoding(input('Enter a bit message for the Hamming decoding: '))
-crc32Decoding(input('Enter a bit message for the crc32 detection: '))
+# Connection Layer
+def getData(data):
+    # Unpack the received data
+    hamming_code = data[:8].decode('utf-8').strip('\x00')
+    crc32_code = data[8:].decode('utf-8').strip('\x00')
+    print(f"Received Hamming Code: {hamming_code}")
+    print(f"Received CRC32 Code: {crc32_code}")
+    crc32Success = crc32Decoding(crc32_code)
+    hammingSuccess = hammingDecoding(hamming_code)
+    print("Checksum failed") if not crc32Success else print("Checksum accepted")
+    print(f"Hamming must be corrected, this is the new hamming: {hammingSuccess[0]}") if not hammingSuccess[1] else print(f"Accepted Hamming: {hammingSuccess[0]}")
+    return {"h_message": hammingSuccess[0], "crc_message": crc32_code}  
 
-# message = input("Enter a bit message of any length: ")
-# encodedMessage = hammingEncoding(message)
-# decodedMessage = hammingDecoding(encodedMessage)
-# print(encodedMessage)
-# print(decodedMessage)
-# message = input("enter bit message: ")
-# print(f'Message corrected is: {hammingDecoding(message)}')
+def main():
+    HOST = "127.0.0.1"  # IP, capa de Red. 127.0.0.1 es localhost
+    PORT = 65432        # Puerto, capa de Transporte
 
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT))
+        s.listen()
+        conn, addr = s.accept()
+        with conn:
+            print(f"Conexion Entrante del proceso {addr}")
+            while True:
+                data = conn.recv(1024)
+                if not data:
+                    break
+                getData(data)
 
+if __name__ == "__main__":
+    main()
