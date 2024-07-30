@@ -14,7 +14,7 @@ using namespace std;
 struct Message {
     char hamming_code_l[8] = {0};
     char hamming_code_r[8] = {0};
-    char crc32_code[37] = {0};
+    char crc32_code[41] = {0};
 };
 
 uint32_t crc32(const std::string& data) {
@@ -41,21 +41,38 @@ std::string uint32ToBinaryString(uint32_t value) {
     return result;
 }
 
-// Function to calculate Hamming (7,4) code
+// Función para calcular el código Hamming (7,4)
 string hamming74(const string &data) {
+    cout<<endl<<"Data: "<<data<<endl;
     int n = data.length();
-    vector<int> bits(n + 3);
-    for (int i = 0; i < n; ++i) {
-        bits[i] = data[i] - '0'; // char to int
+    vector<int> bits(n+3);
+    bits[0] = data[0]-'0';
+    bits[1] = data[1]-'0';
+    bits[2] = data[2]-'0';
+    bits[4] = data[3]-'0';
+    vector<string> exOr(n);
+    int counter = 0;
+    int length = bits.size();
+    for (int i = length-1; i >= 0; i--){
+        if (bits[i]==1){
+            string value = std::bitset<3>(length-(i)).to_string();
+            exOr[counter]=value;
+            counter++;
+        }
+    }
+    for (int i = 0; i < n; i++){
+        if (exOr[i]==""){
+            exOr[i] = std::bitset<3>(0).to_string();
+        }
     }
     
     // Parity calculation
-    bits[6] = bits[0] ^ bits[2] ^ bits[4];
-    bits[5] = bits[0] ^ bits[1] ^ bits[4];
-    bits[3] = bits[0] ^ bits[1] ^ bits[2];
-
+    bits[3] = (((int)exOr[0][0])+((int)exOr[1][0])+((int)exOr[2][0])+((int)exOr[3][0]))%2;
+    bits[5] = (((int)exOr[0][1])+((int)exOr[1][1])+((int)exOr[2][1])+((int)exOr[3][1]))%2;
+    bits[6] = (((int)exOr[0][2])+((int)exOr[1][2])+((int)exOr[2][2])+((int)exOr[3][2]))%2;
+    
     string hamming_code = to_string(bits[0]) + to_string(bits[1]) + to_string(bits[2]) +
-                          to_string(bits[3]) + to_string(bits[4]) + to_string(bits[5]) + to_string(bits[6]);
+                      to_string(bits[3]) + to_string(bits[4]) + to_string(bits[5]) + to_string(bits[6]);
     return hamming_code;
 }
 
@@ -63,7 +80,7 @@ string hamming74(const string &data) {
 Message encode(const string &input) {
     // hamming left & right
     string leftP = input.substr(0, 4);  // fixed length 4
-    string rightP = input.substr(4, 4); // fixed length 4
+    string rightP = input.substr(4, 7); // fixed length 4
     string hamming_encoded_l = hamming74(leftP);
     string hamming_encoded_r = hamming74(rightP);
     // crc
@@ -98,7 +115,7 @@ Message applyNoise(Message mess){
     int position;
     cout << random_number << endl;
     // Apply Noise CRC32 & Hamming
-    if (random_number > 0.7) {
+    if (random_number < 0.0) {
         // left hamming
         position = dist(eng) * (sizeof(mess.hamming_code_l) - 1);
         mess.hamming_code_l[position] = (mess.hamming_code_l[position] == '0' ? '1' : '0');
