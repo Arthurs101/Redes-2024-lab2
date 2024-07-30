@@ -96,15 +96,18 @@ def crc32Decoding(input):
 # Connection Layer
 def getData(data):
     # Unpack the received data
-    hamming_code = data[:8].decode('utf-8').strip('\x00')
-    crc32_code = data[8:].decode('utf-8').strip('\x00')
-    print(f"Received Hamming Code: {hamming_code}")
+    hamming_code_left = data[:8].decode('utf-8').strip('\x00')
+    hamming_code_right = data[8:16].decode('utf-8').strip('\x00')
+    crc32_code = data[16:].decode('utf-8').strip('\x00')
+    print(f"Received Hamming Code Left: {hamming_code_left}\tReceived Hamming Code Right: {hamming_code_right}")
     print(f"Received CRC32 Code: {crc32_code}")
     crc32Success = crc32Decoding(crc32_code)
-    hammingSuccess = hammingDecoding(hamming_code)
+    hammingSuccessLeft = hammingDecoding(hamming_code_left)
+    hammingSuccessRight = hammingDecoding(hamming_code_right)
     print("Checksum failed") if not crc32Success else print("Checksum accepted")
-    print(f"Hamming must be corrected, this is the new hamming: {hammingSuccess[0]}") if not hammingSuccess[1] else print(f"Accepted Hamming: {hammingSuccess[0]}")
-    return {"h_message": hammingSuccess[0], "crc_message": crc32_code}  
+    print(f"Hamming Left must be corrected, this is the new hamming: {hammingSuccessLeft[0]}") if not hammingSuccessLeft[1] else print(f"Accepted Hamming: {hammingSuccessLeft[0]}")
+    print(f"Hamming Right must be corrected, this is the new hamming: {hammingSuccessRight[0]}") if not hammingSuccessRight[1] else print(f"Accepted Hamming: {hammingSuccessRight[0]}")
+    return {"h_message_left": hammingSuccessLeft[0], "h_message_right": hammingSuccessRight[0], "crc_message": crc32_code}  
 
 def main():
     HOST = "127.0.0.1"  # IP, capa de Red. 127.0.0.1 es localhost
