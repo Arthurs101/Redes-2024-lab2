@@ -2,7 +2,7 @@ import socket
 import struct
 import math
 
-
+incorrectBuffers = 0
 
 def hammingEncoding(message):
     mesLen = len(message)
@@ -42,6 +42,7 @@ def hammingEncoding(message):
             newM[index-1] = str(resXOR[counter])
             counter-=1
     return ''.join(newM)[::-1]
+
 def hammingDecoding(message):
     resXOR = []
     xorOp = []
@@ -84,6 +85,7 @@ def crc32(data):
     return crc ^ 0xFFFFFFFF
 
 def crc32Decoding(input):
+    global incorrectBuffers
     data = input[:-32]
     checksum = format(crc32(data),'032b')
     if input[-32:] == str(checksum):
@@ -91,11 +93,11 @@ def crc32Decoding(input):
         return True
     else:
         print('Incorrect checksum')
+        incorrectBuffers += 1
         return False
 
 # Connection Layer
 def getData(data):
-    print(type(data))
     data1 = data.split(b'\x00')
     data1 = [item.decode('utf-8') for item in data1]
     messageData = []
@@ -114,38 +116,40 @@ def getData(data):
         print(f"Hamming Right must be corrected, this is the new hamming: {hammingSuccessRight[0]}") if not hammingSuccessRight[1] else print(f"Accepted Hamming Right: {hammingSuccessRight[0]}")
         messageData.append({"h_message_left": hammingSuccessLeft[0], "h_message_right": hammingSuccessRight[0], "crc_message": crc32_code})  
     return messageData
+
 # Presentation layer
 def decodeData(data1):
-    hamming =""
+    hamming = ""
     crc32 = ""
     for data in data1:
-        hamming+=chr(int(data["h_message_left"][:3]+data["h_message_left"][4]+data["h_message_right"][:3]+data["h_message_right"][4],2))
-        crc32+=chr(int(data["crc_message"][:-32],2))
-    return {"hamming":hamming, "crc32":crc32}
-    
+        hamming += chr(int(data["h_message_left"][:3] + data["h_message_left"][4] + data["h_message_right"][:3] + data["h_message_right"][4], 2))
+        crc32 += chr(int(data["crc_message"][:-32], 2))
+    return {"hamming": hamming, "crc32": crc32}
+
 def main():
     HOST = "127.0.0.1"  # IP, capa de Red. 127.0.0.1 es localhost
     PORT = 65432        # Puerto, capa de Transporte
-    counter = 0
-    while counter<100:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((HOST, PORT))
-            s.listen()
-            conn, addr = s.accept()
-            with conn:
-                print(f"Conexion Entrante del proceso {addr}")
-                while True:
-                    data = conn.recv(1024)
-                    if not data:
-                        break
-                    # Connection layer
-                    data = getData(data)
-                    # Presentation layer
-                    data = decodeData(data)
-                    # Application Layer
-                    print(f"Hamming message is: ",data["hamming"])
-                    print(f"Crc32 message is: ",data["crc32"])
-                
+    numberBuffers = 0
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT))
+        s.listen()
+        conn, addr = s.accept()
+        with conn:
+            print(f"Conexion Entrante del proceso {addr}")
+            while True:
+                data = conn.recv(1024)
+                if not data:
+                    break
+                # Connection layer
+                data = getData(data)
+                # Presentation layer
+                data = decodeData(data)
+                # Application Layer
+                print(f"Hamming message is: ", data["hamming"])
+                print(f"Crc32 message is: ", data["crc32"])
+                numberBuffers += 1
+    print("Amount of Stream Buffers (Buffers Sended): ",numberBuffers)
+    print("Amount of letters with errors: ",incorrectBuffers)
 
 if __name__ == "__main__":
     main()
