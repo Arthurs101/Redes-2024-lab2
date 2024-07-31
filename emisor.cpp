@@ -43,7 +43,6 @@ std::string uint32ToBinaryString(uint32_t value) {
 
 // Función para calcular el código Hamming (7,4)
 string hamming74(const string &data) {
-    cout<<endl<<"Data: "<<data<<endl;
     int n = data.length();
     vector<int> bits(n+3);
     bits[0] = data[0]-'0';
@@ -140,50 +139,49 @@ string charEncoding(char character){
 }
 
 int main() {
-    // Application Layer
-    char character;
-    cout << "Enter a character: ";
-    cin >> character;
-    // Presentation Layer
-    string bit_string = charEncoding(character);
-    cout << "Encoded bit string: " << bit_string << endl;
-    // Validate that the input is a bit string
-    if (!all_of(bit_string.begin(), bit_string.end(), [](char c) { return c == '0' || c == '1'; })) {
-        cerr << "Invalid input. Please enter a valid bit string." << endl;
-        return 1;
-    }
-    // Connection Layer
-    Message newM = encode(bit_string);
-    
-    // Noise layer
-    Message finalMessage = applyNoise(newM);
-
     // creating socket 
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (clientSocket < 0) {
         cerr << "Socket creation error" << endl;
         return 1;
     }
-
     // specifying address 
     sockaddr_in serverAddress; 
     serverAddress.sin_family = AF_INET; 
     serverAddress.sin_port = htons(65432); 
     serverAddress.sin_addr.s_addr = INADDR_ANY; 
-
     // sending connection request 
     if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
         cerr << "Connection failed" << endl;
         return 1;
     }
-    // sending data 
-    // Transmission Layer
-    if (send(clientSocket, &finalMessage, sizeof(finalMessage), 0) < 0) {
-        perror("Send failed");
-        return 1;
+    string buffer;
+    cout << "Enter a buffer: ";
+    cin >> buffer;
+    for (int k = 0 ; k < buffer.size(); k++){
+        // Application Layer
+        char character = buffer[k];
+        // Presentation Layer
+        string bit_string = charEncoding(character);
+        cout << "Encoded bit string: " << bit_string << endl;
+        // Validate that the input is a bit string
+        if (!all_of(bit_string.begin(), bit_string.end(), [](char c) { return c == '0' || c == '1'; })) {
+            cerr << "Invalid input. Please enter a valid bit string." << endl;
+            return 1;
+        }
+        // Connection Layer
+        Message newM = encode(bit_string);
+        
+        // Noise layer
+        Message finalMessage = applyNoise(newM);
+        // sending data 
+        // Transmission Layer
+        if (send(clientSocket, &finalMessage, sizeof(finalMessage), 0) < 0) {
+            perror("Send failed");
+            return 1;
+        }
     }
-
     // closing socket 
-    close(clientSocket); 
+    close(clientSocket);
     return 0;
 }
