@@ -75,113 +75,34 @@ string hamming74(const string &data) {
     return hamming_code;
 }
 
-// Function to encode a bit string using Hamming and CRC32
-Message encode(const string &input) {
-    // hamming left & right
-    string leftP = input.substr(0, 4);  // fixed length 4
-    string rightP = input.substr(4, 7); // fixed length 4
-    string hamming_encoded_l = hamming74(leftP);
-    string hamming_encoded_r = hamming74(rightP);
-    // crc
+// Función para codificar una cadena de bits usando el código Hamming y CRC32 Checksum
+void encode(const string &input) {
+    string hamming_encoded = hamming74(input);
     uint32_t crc = crc32(input);
     std::string crcBinaryString = uint32ToBinaryString(crc);
     std::string output = input + crcBinaryString;
-    // print changes
-    cout << "Hamming encoded left: " << hamming_encoded_l << endl << "Hamming encoded right: " << hamming_encoded_r << endl;
+    cout << "Hamming encoded: " << hamming_encoded << endl;
     cout << "CRC32 Checksum: " << output << endl;
-    Message newM;
-    // left hamming
-    strncpy(newM.hamming_code_l, hamming_encoded_l.c_str(), sizeof(newM.hamming_code_l) - 1);
-    newM.hamming_code_l[sizeof(newM.hamming_code_l) - 1] = '\0';
-    // right hamming
-    strncpy(newM.hamming_code_r, hamming_encoded_r.c_str(), sizeof(newM.hamming_code_r) - 1);
-    newM.hamming_code_r[sizeof(newM.hamming_code_r) - 1] = '\0';
-    // crc32
-    strncpy(newM.crc32_code, output.c_str(), sizeof(newM.crc32_code) - 1);
-    newM.crc32_code[sizeof(newM.crc32_code) - 1] = '\0';
-    return newM;
-}
-
-Message applyNoise(Message mess){
-    // Seed with a real random value, if available
-    std::random_device rd;
-    // Use the default_random_engine and the uniform_real_distribution
-    std::default_random_engine eng(rd());
-    std::uniform_real_distribution<> dist(0.0, 1.0);
-    // Generate a random number between 0 and 1
-    double random_number = dist(eng);
-    // Apply Noise Hamming
-    int position;
-    cout << random_number << endl;
-    // Apply Noise CRC32 & Hamming
-    if (random_number < 0.5) {
-        // left hamming
-        position = dist(eng) * (sizeof(mess.hamming_code_l) - 1);
-        mess.hamming_code_l[position] = (mess.hamming_code_l[position] == '0' ? '1' : '0');
-        cout << "Applied noise in hamming code left, position: " << position << endl;
-        // right hamming
-        position = dist(eng) * (sizeof(mess.hamming_code_r) - 1);
-        mess.hamming_code_r[position] = (mess.hamming_code_r[position] == '0' ? '1' : '0');
-        cout << "Applied noise in hamming code right, position: " << position << endl;
-        // crc32
-        position = dist(eng) * (sizeof(mess.crc32_code) - 1);
-        mess.crc32_code[position] = (mess.crc32_code[position] == '0' ? '1' : '0');
-        cout << "Applied noise in crc32 code, position: " << position << endl;
-    }
-    return mess;
-}
-
-// encode character
-string charEncoding(char character){
-    int asciiValue = (int)character;
-    string binary = std::bitset<8>(asciiValue).to_string(); // to binary
-    return binary;
 }
 
 int main() {
-    // creating socket 
-    int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (clientSocket < 0) {
-        cerr << "Socket creation error" << endl;
+    string bit_string;
+    cout << "Enter a bit string: ";
+    cin >> bit_string;
+
+    // Validar que la entrada sea una cadena de bits
+    if (!all_of(bit_string.begin(), bit_string.end(), [](char c) { return c == '0' || c == '1'; })) {
+        cerr << "Invalid input. Please enter a valid bit string." << endl;
         return 1;
     }
-    // specifying address 
-    sockaddr_in serverAddress; 
-    serverAddress.sin_family = AF_INET; 
-    serverAddress.sin_port = htons(65432); 
-    serverAddress.sin_addr.s_addr = INADDR_ANY; 
-    // sending connection request 
-    if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
-        cerr << "Connection failed" << endl;
+
+    // Validar que la longitud de la entrada sea válida para Hamming (7,4)
+    if (bit_string.length() != 4) {
+        cerr << "Invalid input length for Hamming (7,4). Please enter a 4-bit string." << endl;
         return 1;
     }
-    string buffer;
-    cout << "Enter a buffer: ";
-    cin >> buffer;
-    for (int k = 0 ; k < buffer.size(); k++){
-        // Application Layer
-        char character = buffer[k];
-        // Presentation Layer
-        string bit_string = charEncoding(character);
-        cout << "Encoded bit string: " << bit_string << endl;
-        // Validate that the input is a bit string
-        if (!all_of(bit_string.begin(), bit_string.end(), [](char c) { return c == '0' || c == '1'; })) {
-            cerr << "Invalid input. Please enter a valid bit string." << endl;
-            return 1;
-        }
-        // Connection Layer
-        Message newM = encode(bit_string);
-        
-        // Noise layer
-        Message finalMessage = applyNoise(newM);
-        // sending data 
-        // Transmission Layer
-        if (send(clientSocket, &finalMessage, sizeof(finalMessage), 0) < 0) {
-            perror("Send failed");
-            return 1;
-        }
-    }
-    // closing socket 
-    close(clientSocket);
+
+    encode(bit_string);
+
     return 0;
 }
